@@ -1,7 +1,8 @@
 % #!/usr/bin/env escript
 
 -module(tsplibReader).
--compile([init/1]).
+-export([init/1]).
+% -compile([]).
 
 strip(S) -> re:replace(S, "\n", "", [global,{return,list}]).
 
@@ -63,7 +64,7 @@ fill_distance_map(Map) -> fill_distance_map(Map, #{}).
 fill_distance_map(Map, Acc) -> 
     It1 = maps:iterator(Map),
     It2 = maps:iterator(Map),
-    Acc2 = loop(Map, It1, It2, Acc).
+    loop(Map, It1, It2, Acc).
 
 loop(_Map, none, none, Acc) -> Acc;
 loop(Map, Iter_i, none, Acc) -> 
