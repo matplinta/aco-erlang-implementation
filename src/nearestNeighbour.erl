@@ -12,8 +12,8 @@ solve(Dimension, Distance) ->
     % io:format("~w~n", [CitiesToVisit]),
     % Solution = [CurrentCity],
     Sol = nearestCities(Distance, CitiesToVisit, CurrentCity),
-    Solution = lists:append(lists:append([CurrentCity], Sol), CurrentCity),
-    % io:format("~w~n", [Solution]).
+    Solution = lists:append(lists:append([CurrentCity], Sol), [CurrentCity]),
+    % io:format("~w~n", [Solution]),
     Solution.
     
 
