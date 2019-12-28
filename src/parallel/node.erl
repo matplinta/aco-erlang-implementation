@@ -101,7 +101,7 @@ initNodes(N, NodeNo, AdjTable, Acc) ->
     
 node(NodeNo, DistanceTo, Pheromones, Probability) -> 
 	receive
-		{Ant, {where, Visited}} -> 
+		{where, {Ant, Visited}} -> 
             % io:format("\n a czy tu wejde ~w, ~w\n", [Ant, Visited]),
             Node = whereTo(Probability, Visited),
             if 
@@ -111,6 +111,11 @@ node(NodeNo, DistanceTo, Pheromones, Probability) ->
                     Ant ! {goto, Node, maps:get(Node, DistanceTo)}
             end,
             node(NodeNo, DistanceTo, Pheromones, Probability);
+        {update, {Next, Addition}} ->
+            Value = maps:get(Next, Pheromones),
+            UpdatedPheromones = maps:update(Next, Value + Addition, Pheromones),
+            node(NodeNo, DistanceTo, UpdatedPheromones, Probability);
+            
 		_ ->
 			node(NodeNo, DistanceTo, Pheromones, Probability)
 	end.
