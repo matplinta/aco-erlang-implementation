@@ -1,20 +1,31 @@
 -module (master).
--export ([initMaster/0, master/2]).
+-export ([initMaster/3, master/6]).
 -define(MAXINT, 9999999999999).
 
-initMaster() -> 
-    spawn(master, master, [?MAXINT, []]).
+initMaster(StopCondition, AntsQt, TechnicalAnt) -> 
+    spawn(master, master, [StopCondition, AntsQt, 0, TechnicalAnt, ?MAXINT, []]).
 
-master(BestDistance, BestPath) ->
+sendEvaporateOrder(TechnicalAnt, 0) -> 
+    TechnicalAnt ! {evaporate}, 
+    % io:format("\nEVAPORATEEEEEEEEEEEEEEE"),
+    ok;
+sendEvaporateOrder(_, _) -> nok.
+
+master(StopCondition, AntsQt, AntsIter, TechnicalAnt, BestDistance, BestPath) ->
+    sendEvaporateOrder(TechnicalAnt, AntsIter rem AntsQt),
     receive
-        {check, {Distance, Path}} ->
+        {check, {Ant, Distance, Path}} ->
             if 
+                AntsIter/AntsQt >= StopCondition ->
+                    Ant ! {die},
+                    io:format("\nBEST FITNESS FOUND: ~w,\tPath: ~w", [BestDistance, BestPath]);
+                    % master(StopCondition, AntsQt, AntsIter + 1, TechnicalAnt, BestDistance, BestPath)
                 Distance < BestDistance ->
-                    io:format("\nNEW BEST FITNESS: ~w\n~w", [Distance, Path]),
-                    master(Distance, Path);
+                    io:format("\nNEW BEST FITNESS:  ~w,\tPath: ~w", [Distance, Path]),
+                    master(StopCondition, AntsQt, AntsIter + 1, TechnicalAnt, Distance, Path);
                 true ->
-                    master(BestDistance, BestPath)
+                    master(StopCondition, AntsQt, AntsIter + 1, TechnicalAnt, BestDistance, BestPath)
             end;
         _ ->
-            master(BestDistance, BestPath)
+            master(StopCondition, AntsQt, AntsIter + 1, TechnicalAnt, BestDistance, BestPath)
     end.

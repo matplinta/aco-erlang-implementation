@@ -1,8 +1,8 @@
 -module (main).
 -import(reader, [init/1]).
 -import(node, [initNodes/2, node/4]).
--import(ant, [initAnts/4, ant/4]).
--import(master, [initMaster/0, master/2]).
+-import(ant, [initAnts/4, ant/4, initTechnicalAnt/1, technicalAnt/1]).
+-import(master, [initMaster/3, master/6]).
 
 -compile(export_all).
 
@@ -11,7 +11,10 @@
 
 init() -> 
 	{N, _Map, Adj} = reader:init("../../problems/oliver30.tsp"),
-	Master = initMaster(),
+	AntsQuantity = 30,
+	StopAfterSingleAntIterations = 10000,
+
 	Nodes = initNodes(N, Adj),
-	io:format("\n\nPIDS MAP\n~w", [Nodes]),
-	initAnts(Master, N, 2, Nodes).
+	TechnicalAnt = initTechnicalAnt(Nodes),
+	Master = initMaster(StopAfterSingleAntIterations, AntsQuantity, TechnicalAnt),
+	initAnts(Master, N, AntsQuantity, Nodes).
