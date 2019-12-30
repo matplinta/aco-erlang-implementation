@@ -3,7 +3,7 @@
 
 % Pheromone level deposition constant; Pheromone deposited on a node = Q/Lk
 % where Lk is a cost of the k'th ant tour, typically, in our case, lenght of the tour
--define(Q, 1).
+-define(Q, 100000).
 
 % a parameter to control the influence of pheromones
 -define(Alfa, 1).
@@ -143,31 +143,3 @@ technicalAnt(NodesPids) ->
         _ ->
             technicalAnt(NodesPids)
     end.
-
-
-% DECIDE WHERE BEST TO GO NEXT
-% whereTo(Probabilities, Visited) -> 
-%     Iterator = maps:iterator(Probabilities), 
-%     whereTo(Iterator, Visited, 0, 0.0).
-% whereTo(Iterator, Visited, MaxKey, MaxVal) -> 
-%     case maps:next(Iterator) of
-%         {Key, Val, Iterrator2} ->
-%             case lists:member(Key, Visited) of
-%                 true -> 
-%                     whereTo(Iterrator2, Visited, MaxKey, MaxVal);
-%                 false -> 
-%                     if 
-%                         Val >= MaxVal ->
-%                             whereTo(Iterrator2, Visited, Key, Val);
-%                         true ->
-%                             whereTo(Iterrator2, Visited, MaxKey, MaxVal)
-%                     end
-%             end;
-%         none ->
-%             MaxKey
-%     end.
-
-% PRETTIER BUT MORE TIME-COSTLY VERSION OF whereTo(Probabilities, Visited)
-% findMax(Key, Value, {undefined, undefined}) -> {Key, Value};
-% findMax(Key, Value, {_, Value2}) when Value > Value2 -> {Key, Value};
-% findMax(_Key, _Value, Acc) -> Acc.

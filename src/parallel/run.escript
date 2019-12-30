@@ -1,6 +1,8 @@
 #!/usr/bin/env escript
-%% -*- erlang -*-
-%%! -smp enable -sname factorial -mnesia debug verbose
+
+-import(main, [run/0]).
+-export([main/1]).
+
 main([String]) ->
     try
         N = list_to_integer(String),
@@ -11,9 +13,14 @@ main([String]) ->
             usage()
     end;
 main(_) ->
-    usage().
+    usage(),
+    main:run().
+
 usage() ->
     io:format("usage: factorial integer\n"),
     halt(1).
 fac(0) -> 1;
 fac(N) -> N * fac(N-1).
+
+% main(_) -> 
+%     main:run().

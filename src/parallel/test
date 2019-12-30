@@ -1,8 +1,0 @@
-#!/usr/bin/env escript
-
--import(reader, [init/1]).
--compile(export_all).
--mode(compile).
-
-main(_) -> 
-    main:initialize().

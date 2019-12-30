@@ -17,15 +17,8 @@ init(FileName) ->
     Contents = read_lines(FileName),
     Lines = string:split(Contents, "\n", all),
     Dimension = read_dimension(Lines),
-    % io:format("~s", [Contents]),
-    % io:format("dimension: ~w\n\n", [read_dimension(Lines)]).
-    % Map = maps:put(dimension, Dimension, read_nodes(Lines)),
     Map = read_nodes(Lines),
     Distance = fill_same(fill_distance_map(Map)),
-
-    % {ok, D1} = maps:find({11,13}, DistFull),
-    % {ok, D2} = maps:find({13,11}, DistFull),
-    % io:format("~w ~w", [D1, D2]).
     {Dimension, Map, Distance}.
 
 read_lines(FileName) ->
@@ -49,9 +42,15 @@ read_nodes([], Acc) -> Acc;
 read_nodes([ Line | T ], Acc) -> 
     try
         [N, X, Y] = to_i_list(Line),
-        Acc2 = maps:put(N, {X, Y}, Acc),
-        read_nodes(T, Acc2)
-    catch error:{badmatch, _V } -> read_nodes(T, Acc)
+        case is_integer(N) of
+            true ->
+                Acc2 = maps:put(N, {X, Y}, Acc),
+                read_nodes(T, Acc2);
+            false ->
+                read_nodes(T, Acc)
+        end
+    catch error:{badmatch, _V } -> 
+        read_nodes(T, Acc)
     end.
 
 euclidean_distance({X1, Y1}, {X2, Y2}) ->
@@ -76,8 +75,9 @@ loop(Map, Iter_i, Iter_j, Acc) ->
     case maps:next(Iter_i) of
         none ->  loop(Map, none, none, Acc);
         {K1, {X1, Y1}, _} ->
-            % io:format("~w", [K1]),
+            % io:format("I1: ~w, ~w, ~w\n", [K1, X1, Y1]),
             {K2, {X2, Y2}, NewIter_j} = maps:next(Iter_j),
+            % io:format(" I2: ~w, ~w, ~w, ~w\n", [K2, X2, Y2, Iter_j]),
             Acc2 = maps:put({K1, K2}, euclidean_distance({X1, Y1}, {X2, Y2}), Acc),
             loop(Map, Iter_i, NewIter_j, Acc2)
     end.

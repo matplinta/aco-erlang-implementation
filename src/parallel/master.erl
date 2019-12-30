@@ -10,8 +10,12 @@ initMaster(StartTime, StopCondition, AntsQt, TechnicalAnt) ->
     spawn(master, master, [StartTime, false, StopCondition, AntsQt, 1, TechnicalAnt, none, []]).
 
 % HANDLE EVAPORATE CONDITION
-sendEvaporateOrder(TechnicalAnt, 0) -> TechnicalAnt ! {evaporate}, ok;
-sendEvaporateOrder(_, _) -> nok.
+sendEvaporateOrder(TechnicalAnt, AntsIter, AntsQt) -> sendEvaporateOrder(TechnicalAnt, AntsIter, AntsQt, AntsIter rem AntsQt).
+sendEvaporateOrder(TechnicalAnt, AntsIter, AntsQt, 0) -> 
+    io:format("Single ant iteration finished:\t~w\n",[ round(AntsIter/AntsQt) ]),
+    TechnicalAnt ! {evaporate},
+    ok;
+sendEvaporateOrder(_, _, _, _) -> nok.
 
 % MASTER PROCESS MESSAGE HANDLING
 master(StartTime, Stop, StopCondition, AntsQt, AntsIter, TechnicalAnt, BestDistance, BestPath) ->
@@ -19,7 +23,7 @@ master(StartTime, Stop, StopCondition, AntsQt, AntsIter, TechnicalAnt, BestDista
         {check, {Ant, Distance, Path}} ->
             % send evaporate message to every node only upon complete, on average, each ant iteration
             % meaning: if <every traversal(counting in every ant)> mod <ants quantity> == 0 => evaporate
-            sendEvaporateOrder(TechnicalAnt, AntsIter rem AntsQt),
+            sendEvaporateOrder(TechnicalAnt, AntsIter, AntsQt),
             if 
                 % if there is only one ant left alive, kill it and tell Technical Ant to kill all nodes and itself also
                 AntsQt == 1 ->
@@ -32,15 +36,17 @@ master(StartTime, Stop, StopCondition, AntsQt, AntsIter, TechnicalAnt, BestDista
                     case Stop of
                         false -> 
                             Time = erlang:convert_time_unit(erlang:monotonic_time() - StartTime, native, millisecond),
-                            io:format("\n\nBEST PATH FOUND: ~w,\tPath: ~w", [BestDistance, BestPath]),
-                            io:format("\nTIME ELAPSED:\t~w ms\n", [Time]),
+                            io:format("\n\nBEST PATH FOUND:\t~w,\tPath: ~w", [BestDistance, BestPath]),
+                            io:format("\nTIME ELAPSED:\t\t~w ms\n", [Time]),
                             master(StartTime, true, StopCondition, AntsQt - 1, AntsIter + 1, TechnicalAnt, BestDistance, BestPath);
                         true ->
                             master(StartTime, Stop, StopCondition, AntsQt - 1, AntsIter + 1, TechnicalAnt, BestDistance, BestPath)
                     end;
                 % check for a better path
                 Distance < BestDistance ->
-                    io:format("\nNew best path:  ~w,\tPath: ~w", [Distance, Path]),
+                    Time = erlang:convert_time_unit(erlang:monotonic_time() - StartTime, native, millisecond),
+                    % io:format("New best path:  ~w,\tPath: ~w, \tFound after: ~w ms\n", [Distance, Path, Time]),
+                    io:format("New best path:  ~w, \tFound after: ~w ms\n", [Distance, Time]),
                     master(StartTime, Stop, StopCondition, AntsQt, AntsIter + 1, TechnicalAnt, Distance, Path);
                 true ->
                     master(StartTime, Stop, StopCondition, AntsQt, AntsIter + 1, TechnicalAnt, BestDistance, BestPath)
