@@ -12,15 +12,15 @@
 % typically 1 / dxy where d is the distance
 -define(Beta, 1).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%                  ANT                  %%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%                ANT                %%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % INITIALIZE ANTS
 initAnts(_Master, _N, 0, _NodesPids) -> ok;
 initAnts(Master, N, AntsQuantity, NodesPids) -> 
 	Ant = spawn(ant, ant, [Master, NodesPids, 0, []]),
-	Ant ! {init, rand:uniform(N)},
+	Ant ! {init, {rand:uniform(N)}},
 	initAnts(Master, N, AntsQuantity - 1, NodesPids).
 
 % UPDATE PHEROMONE LEVEL ON TRAVERSED PATH
@@ -32,44 +32,7 @@ updatePheromonesOnPath(NodesPids, Addition, [ First | [ Next | _ ] = Path ] ) ->
     NextPid ! {update, {First, Addition}},
     updatePheromonesOnPath(NodesPids, Addition, Path).
 
-
-
-tauTimesN(DistanceTo, Pheromones) -> 
-    tauTimesN(maps:keys(DistanceTo), DistanceTo, Pheromones, #{}).
-tauTimesN([], _, _, Acc) -> Acc;
-tauTimesN([NodeNo | Nodes], DistanceTo, Pheromones, Acc) ->
-    Distance = maps:get(NodeNo, DistanceTo),
-    Pheromone = maps:get(NodeNo, Pheromones),
-    ProbabilityUnnormalized = probabilityUnnormalized(Distance, Pheromone),
-    tauTimesN(Nodes, DistanceTo, Pheromones, maps:put(NodeNo, ProbabilityUnnormalized, Acc)).
-
-% DECIDE WHERE BEST TO GO NEXT
-whereTo(Probabilities, Visited) -> 
-    Iterator = maps:iterator(Probabilities), 
-    whereTo(Iterator, Visited, 0, 0.0).
-whereTo(Iterator, Visited, MaxKey, MaxVal) -> 
-    case maps:next(Iterator) of
-        {Key, Val, Iterrator2} ->
-            case lists:member(Key, Visited) of
-                true -> 
-                    whereTo(Iterrator2, Visited, MaxKey, MaxVal);
-                false -> 
-                    if 
-                        Val >= MaxVal ->
-                            whereTo(Iterrator2, Visited, Key, Val);
-                        true ->
-                            whereTo(Iterrator2, Visited, MaxKey, MaxVal)
-                    end
-            end;
-        none ->
-            MaxKey
-    end.
-
-% PRETTIER BUT MORE TIME-COSTLY VERSION OF whereTo(Probabilities, Visited)
-% findMax(Key, Value, {undefined, undefined}) -> {Key, Value};
-% findMax(Key, Value, {_, Value2}) when Value > Value2 -> {Key, Value};
-% findMax(_Key, _Value, Acc) -> Acc.
-
+% SUM VALUES IN A MAP
 sumMap(Map) ->
     lists:sum(maps:values(Map)).
 
@@ -92,18 +55,22 @@ countProbability([NodeNo | Nodes], DistanceTo, Pheromones, Acc) ->
     Probability = probabilityUnnormalized(Distance, Pheromone),
 	countProbability(Nodes, DistanceTo, Pheromones, maps:put(NodeNo, Probability, Acc)).
 	
+% ROULETTE WHEEL SELECTION METHOD
 rouletteWheel(Probabilities, SumOf) -> 
-	rouletteWheel(Probabilities, rand:uniform() * SumOf , maps:keys(Probabilities), 0.0).
-rouletteWheel(Probabilities, Rand, [First | Nodes], Prob) ->
-	io:format("wheel: ~w, ~w\n", [Rand, Prob]),
-	case maps:get(First, Probabilities) < Rand of
+	Nodes = maps:keys(Probabilities),
+	[First | _] = Nodes,
+	rouletteWheel(Probabilities, rand:uniform() * SumOf , Nodes, maps:get(First, Probabilities)).
+rouletteWheel(_, _, [Last], _) -> Last;
+rouletteWheel(Probabilities, Rand, [First | [Second | _] = ReducedNodes], Prob) ->
+	case Prob < Rand of
 		true -> 
-			NewProb = Prob + maps:get(First, Probabilities),
-			rouletteWheel(Probabilities, Rand, Nodes, NewProb);
+			NewProb = Prob + maps:get(Second, Probabilities),
+			rouletteWheel(Probabilities, Rand, ReducedNodes, NewProb);
 		false ->
 			First
 	end.
 
+% SELECT NEXT NODE BASED ON PROBABILITIES USING ROULETTE WHEEL SELECTION
 selectNextNode(DistanceTo, Pheromones, Visited) ->
     DistanceToOfNTV = maps:without(Visited, DistanceTo),
     PheromonesOfNTV = maps:without(Visited, Pheromones),
@@ -111,19 +78,13 @@ selectNextNode(DistanceTo, Pheromones, Visited) ->
 	SumOfProbabilities = sumMap(ProbabilitiesOfNTV),
 	rouletteWheel(ProbabilitiesOfNTV, SumOfProbabilities).
 
-    % io:format("Probabilities before: ~w\n", [Probabilities]),
-    % io:format("Probabilities after: ~w\n", [NotVisitedNodesProbMap]),
-    % io:format("Output: ~w\n", [{BestNextNode, A}]),
-
-
 % ANT PROCESS MESSAGE HANDLING
 ant(Master, NodesPids, Distance, Path) -> 
     receive
-        {init, StartNode} -> 
+        {init, {StartNode}} -> 
 			NodePid = maps:get(StartNode, NodesPids),
 			NodePid ! {where, {self()}},
 			ant(Master, NodesPids, Distance, [ StartNode | Path]);
-
         {decide, {DistanceTo, Pheromones}} -> 
 			case maps:size(NodesPids) == length(Path) of
 				true ->
@@ -138,37 +99,33 @@ ant(Master, NodesPids, Distance, Path) ->
                     DistToNode = maps:get(NextNode, DistanceTo),
                     ant(Master, NodesPids, Distance + DistToNode, [ NextNode | Path])
             end;
-
 		{finish} -> 
             % send to master info of best fitness
-            Master ! {check, {self(), Distance, Path}},
-            io:format("\nAnt: Distance: ~w,\tPath: ~w", [Distance, Path]),
-
+			Master ! {check, {self(), Distance, Path}},
+			% UNCOMMENT IF YOU WISH TO SEE EVERY SINGLE ANT'S DISTANCE AND PATH
+			% io:format("\nAnt: Distance: ~w,\tPath: ~w", [Distance, Path]),
             % update pheromone table on path
             Addition = ?Q / Distance,
             updatePheromonesOnPath(NodesPids, Addition, Path),
-
             % restart ant's journey
-            self() ! {init, rand:uniform(maps:size(NodesPids))},
+            self() ! {init, {rand:uniform(maps:size(NodesPids))}},
             ant(Master, NodesPids, 0, []);
-
 		{die} ->
 			exit(kill);
-
         _ ->
             ant(Master, NodesPids, Distance, Path)
     end.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%             TECHNICAL ANT             %%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%           TECHNICAL ANT           %%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% EVAPORATE NODES ROUTINE
-evaporateAllNodes(NodesPids) -> evaporateAllNodes(NodesPids, maps:next(maps:iterator(NodesPids))).
-evaporateAllNodes(_, none) -> ok;
-evaporateAllNodes(NodesPids, {_, NodePid, NewIterator}) ->
-    NodePid ! {evaporate},
-    evaporateAllNodes(NodesPids, maps:next(NewIterator)).
+% DISTRIBUTE GIVEN MESSAGE TO ALL NODES METHOD
+distributeToNodes(NodesPids, Msg) -> distributeToNodes(NodesPids, Msg, maps:next(maps:iterator(NodesPids))).
+distributeToNodes(_, _, none) -> ok;
+distributeToNodes(NodesPids, Msg, {_, NodePid, NewIterator}) ->
+    NodePid ! {Msg},
+	distributeToNodes(NodesPids, Msg, maps:next(NewIterator)).
 
 % INITIALIZE TECHNICAL ANT
 initTechnicalAnt(NodesPids) -> 
@@ -178,12 +135,39 @@ initTechnicalAnt(NodesPids) ->
 technicalAnt(NodesPids) ->
     receive
         {evaporate} ->
-            io:format("\nEVAPORATION START\n"),
-            evaporateAllNodes(NodesPids),
+            distributeToNodes(NodesPids, evaporate),
             technicalAnt(NodesPids);
-        {syncnodes} ->
-            technicalAnt(NodesPids);
+		{killnodes} ->
+			% kill all nodes and also technical ant exits (dies :c)
+			distributeToNodes(NodesPids, die);
         _ ->
             technicalAnt(NodesPids)
     end.
 
+
+% DECIDE WHERE BEST TO GO NEXT
+% whereTo(Probabilities, Visited) -> 
+%     Iterator = maps:iterator(Probabilities), 
+%     whereTo(Iterator, Visited, 0, 0.0).
+% whereTo(Iterator, Visited, MaxKey, MaxVal) -> 
+%     case maps:next(Iterator) of
+%         {Key, Val, Iterrator2} ->
+%             case lists:member(Key, Visited) of
+%                 true -> 
+%                     whereTo(Iterrator2, Visited, MaxKey, MaxVal);
+%                 false -> 
+%                     if 
+%                         Val >= MaxVal ->
+%                             whereTo(Iterrator2, Visited, Key, Val);
+%                         true ->
+%                             whereTo(Iterrator2, Visited, MaxKey, MaxVal)
+%                     end
+%             end;
+%         none ->
+%             MaxKey
+%     end.
+
+% PRETTIER BUT MORE TIME-COSTLY VERSION OF whereTo(Probabilities, Visited)
+% findMax(Key, Value, {undefined, undefined}) -> {Key, Value};
+% findMax(Key, Value, {_, Value2}) when Value > Value2 -> {Key, Value};
+% findMax(_Key, _Value, Acc) -> Acc.

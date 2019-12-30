@@ -4,6 +4,10 @@
 % evaporation coefficient
 -define(EvaCo, 0.05).
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%                Node                %%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 % INITIALIZE PHEROMONES MAP
 initPheromones(N, Omit) -> initPheromones(N, Omit, N, #{}).
 initPheromones(_, _, 0, Acc) -> Acc;
@@ -35,7 +39,6 @@ initNodes(_N, 0, _AdjTable, Acc) -> Acc;
 initNodes(N, NodeNo, AdjTable, Acc) -> 
 	DistanceTo = initDistanceTo(N, NodeNo, AdjTable),
     Pheromones = initPheromones(N, NodeNo),
-    % Probability = countProbability(DistanceTo, Pheromones, NodeNo),
     Pid = spawn(node, node, [NodeNo, DistanceTo, Pheromones]),
     initNodes(N, NodeNo - 1, AdjTable, maps:put(NodeNo, Pid, Acc)).
     
@@ -45,34 +48,15 @@ node(NodeNo, DistanceTo, Pheromones) ->
 		{where, {Ant}} -> 
             Ant ! {decide, {DistanceTo, Pheromones}},
             node(NodeNo, DistanceTo, Pheromones);
-
         {update, {Next, Addition}} ->
-            % Start = erlang:monotonic_time(),
-
             NewPheromoneValue = maps:get(Next, Pheromones) + Addition,
             UpdatedPheromones = maps:update(Next, NewPheromoneValue, Pheromones),
-            % Distance = maps:get(Next, DistanceTo),
-            % UpdatedProbability = maps:update(Next, probability(Distance, NewPheromoneValue), Probability),
-            % io:format("Node: ~w, PHEROMONE UPDATE BEFORE: ~w\n~w\n", [NodeNo, Pheromones, Probability]),
-            % io:format("Node: ~w, PHEROMONE UPDATE AFTER: ~w\n~w\n", [NodeNo, UpdatedPheromones, UpdatedProbability]),
-            % Stop = erlang:monotonic_time(),
-            % io:format("UPDATE: ~w\t", [Stop-Start]),
-
 			node(NodeNo, DistanceTo, UpdatedPheromones);
-			
         {evaporate} ->
             Evaporate = fun(K, V, Acc) -> maps:put(K, (1 - ?EvaCo) * V, Acc) end,
-
-            % io:format("Node: ~w, BEFORE EVAPOR: ~w\n", [NodeNo, Pheromones]),
-
             EvaporatedPheromones = maps:fold(Evaporate, #{}, Pheromones),
-
-            % io:format("Node: ~w, AFTER EVAPOR: ~w\n", [NodeNo, EvaporatedPheromones]),
-            
-            % UpdatedProbability = countProbability(DistanceTo, EvaporatedPheromones, NodeNo),
-            node(NodeNo, DistanceTo, EvaporatedPheromones);
+			node(NodeNo, DistanceTo, EvaporatedPheromones);
         {die} ->
-                io:format("NODE: I was killed :(\n"),
                 exit(kill);
 		_ ->
 			node(NodeNo, DistanceTo, Pheromones)
