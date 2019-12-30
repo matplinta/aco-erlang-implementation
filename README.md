@@ -37,3 +37,4 @@ WĘZEŁ JAKO PROCES:
 * wartość feromonu zależy od długości, dlatego dopiero po przebyciu całej ścieżki można odpowiednio updatować wartości feromonu
 * odparowywanie: jeden dedykowany proces, który przez wszystkie węzły przechodzi i odparowuje, może niech to będzie mrówka która przechodzi przez wszystkie węzły. Niech mrówka chodzi sobie sekwencyjnie i odparowuje, i tu nie będzie problemu z kierunkowością. Może niech ona też godzi te rozjazdy miedzy kierunkami, żeby uśredniać? Dobry pomysł, parować i zmniejszać te rozjazdy. Fajnie.
 
+https://books.google.pl/books?id=pg9f4rmV-akC&lpg=PA413&ots=il3o_t9JHf&dq=tsplib%20%22oliver30%22%20best&pg=PA413#v=onepage&q=tsplib%20%22oliver30%22%20best&f=false

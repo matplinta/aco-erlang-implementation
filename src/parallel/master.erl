@@ -1,31 +1,36 @@
 -module (master).
--export ([initMaster/3, master/6]).
+-export ([initMaster/3, master/7]).
 -define(MAXINT, 9999999999999).
 
+% INITIALIZE MASTER PROCESS
 initMaster(StopCondition, AntsQt, TechnicalAnt) -> 
-    spawn(master, master, [StopCondition, AntsQt, 0, TechnicalAnt, ?MAXINT, []]).
+    spawn(master, master, [false, StopCondition, AntsQt, 1, TechnicalAnt, ?MAXINT, []]).
 
-sendEvaporateOrder(TechnicalAnt, 0) -> 
-    TechnicalAnt ! {evaporate}, 
-    % io:format("\nEVAPORATEEEEEEEEEEEEEEE"),
-    ok;
+% HANDLE EVAPORATE CONDITION
+sendEvaporateOrder(TechnicalAnt, 0) -> TechnicalAnt ! {evaporate}, ok;
 sendEvaporateOrder(_, _) -> nok.
 
-master(StopCondition, AntsQt, AntsIter, TechnicalAnt, BestDistance, BestPath) ->
-    sendEvaporateOrder(TechnicalAnt, AntsIter rem AntsQt),
+% MASTER PROCESS MESSAGE HANDLING
+master(Stop, StopCondition, AntsQt, AntsIter, TechnicalAnt, BestDistance, BestPath) ->
     receive
         {check, {Ant, Distance, Path}} ->
+            sendEvaporateOrder(TechnicalAnt, AntsIter rem AntsQt),
             if 
                 AntsIter/AntsQt >= StopCondition ->
                     Ant ! {die},
-                    io:format("\nBEST FITNESS FOUND: ~w,\tPath: ~w", [BestDistance, BestPath]);
-                    % master(StopCondition, AntsQt, AntsIter + 1, TechnicalAnt, BestDistance, BestPath)
+                    case Stop of
+                        false -> 
+                            io:format("\nBEST PATH FOUND: ~w,\tPath: ~w", [BestDistance, BestPath]),
+                            master(true, StopCondition, AntsQt, AntsIter + 1, TechnicalAnt, BestDistance, BestPath);
+                        true ->
+                            master(Stop, StopCondition, AntsQt, AntsIter + 1, TechnicalAnt, BestDistance, BestPath)
+                    end;
                 Distance < BestDistance ->
-                    io:format("\nNEW BEST FITNESS:  ~w,\tPath: ~w", [Distance, Path]),
-                    master(StopCondition, AntsQt, AntsIter + 1, TechnicalAnt, Distance, Path);
+                    io:format("\nNew best path:  ~w,\tPath: ~w", [Distance, Path]),
+                    master(Stop, StopCondition, AntsQt, AntsIter + 1, TechnicalAnt, Distance, Path);
                 true ->
-                    master(StopCondition, AntsQt, AntsIter + 1, TechnicalAnt, BestDistance, BestPath)
+                    master(Stop, StopCondition, AntsQt, AntsIter + 1, TechnicalAnt, BestDistance, BestPath)
             end;
         _ ->
-            master(StopCondition, AntsQt, AntsIter + 1, TechnicalAnt, BestDistance, BestPath)
+            master(Stop, StopCondition, AntsQt, AntsIter + 1, TechnicalAnt, BestDistance, BestPath)
     end.

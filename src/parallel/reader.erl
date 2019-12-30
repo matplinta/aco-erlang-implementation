@@ -91,6 +91,3 @@ fill_same(It, Acc) ->
                 Acc2 = maps:put({K2, K1}, D, Acc),
                 fill_same(NewIt, Acc2)
     end.
-
-main(_) ->
-    init("oliver30.tsp").
