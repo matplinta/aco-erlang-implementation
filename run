@@ -1,0 +1,9 @@
+#!/bin/bash
+
+if [ $# -ne 3 ]; then
+    echo "Usage: <path_to_file> <ants> <iterations>."
+    exit 1
+fi
+
+erl -pz ebin -s main start $1 $2 $3
+# erl -pz ebin -s main start problems/oliver3.tsp 2 2
