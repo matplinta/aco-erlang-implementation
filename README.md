@@ -6,22 +6,25 @@ Implementation of Ant Colony Optimization (ACO) in Erlang language. Solving trav
 Program finds near-optimal solution for travelling salesman problem (TSP) using Ant Colony Optimization algorithm. Structurally program consists of 4 types of processes (besides the main process). These are _node_, which quantity is equal to the number of cities defined in a [TSPLIB data file](http://elib.zib.de/pub/mp-testdata/tsp/tsplib/tsp/index.html), _ant_, which quantity is defined by the user, _technical ant_, which is an ant created solely to give evaporation and die orders to all nodes upon certain conditions met, and lastly _master_ which is a checking process for finding the best solution and other such utilities. 
 
 ## Usage
-To compile: `./compile`.
-To run:     `./run <path_to_tsplib> <ants> <iterations>`.
+To compile and run:
+```sh
+./run <path_to_tsplib> <ants> <iterations> <method>
+```
 
 If you wish to run directly with _Erlang_: 
+```sh
+erl -pz ebin/<method> -s main start problems/oliver30.tsp 30 100
 ```
-erl -pz ebin -s main start problems/oliver30.tsp 30 100
-```
-or in _Eshell_:
-```
+or in <span style="color:purple">_Eshell_</span> -  go to <span style="color:teal">_src/\<method\>_</span> and execute:
+```erlang
 Eshell V10.6  (abort with ^G)
 1> c(main), c(node), c(reader), c(ant), c(master).                % to compile
 2> main:start().                % note to change initial parameters in start() method accordingly!
 ```
+Where _method_ is a chosen method from folder _src_.  
 
 
-
+---
 
 ## Mechanizm działania
 ```erlang

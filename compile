@@ -1,3 +1,0 @@
-#!/bin/bash
-
-erlc -o ebin src/parallel/master.erl src/parallel/main.erl src/parallel/node.erl src/parallel/ant.erl src/parallel/reader.erl

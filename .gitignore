@@ -1,2 +1,4 @@
 *.directory
 *.dump
+ebin/
+10.1.1.96.6751.pdf
