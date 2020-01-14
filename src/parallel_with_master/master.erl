@@ -12,7 +12,7 @@ initMaster(StartTime, StopCondition, AntsQt, TechnicalAnt) ->
 % HANDLE EVAPORATE CONDITION
 sendEvaporateOrder(TechnicalAnt, AntsIter, AntsQt) -> sendEvaporateOrder(TechnicalAnt, AntsIter, AntsQt, AntsIter rem AntsQt).
 sendEvaporateOrder(TechnicalAnt, AntsIter, AntsQt, 0) -> 
-    io:format("Single ant iteration finished:\t~w\n",[ round(AntsIter/AntsQt) ]),
+    % io:format("Single ant iteration finished:\t~w\n",[ round(AntsIter/AntsQt) ]),
     TechnicalAnt ! {evaporate},
     ok;
 sendEvaporateOrder(_, _, _, _) -> nok.
@@ -36,8 +36,9 @@ master(StartTime, Stop, StopCondition, AntsQt, AntsIter, TechnicalAnt, BestDista
                     case Stop of
                         false -> 
                             Time = erlang:convert_time_unit(erlang:monotonic_time() - StartTime, native, millisecond),
-                            io:format("\n\nBEST PATH FOUND:\t~w,\tPath: ~w", [BestDistance, BestPath]),
-                            io:format("\nTIME ELAPSED:\t\t~w ms\n", [Time]),
+                            io:format("BEST PATH FOUND: ~s,\n", [float_to_list(BestDistance,[{decimals,3},compact])]),
+                            io:format("TIME ELAPSED: ~w ms\n", [Time]),
+                            io:format("Path: ~w\n", [BestPath]),
                             master(StartTime, true, StopCondition, AntsQt - 1, AntsIter + 1, TechnicalAnt, BestDistance, BestPath);
                         true ->
                             master(StartTime, Stop, StopCondition, AntsQt - 1, AntsIter + 1, TechnicalAnt, BestDistance, BestPath)
@@ -46,7 +47,7 @@ master(StartTime, Stop, StopCondition, AntsQt, AntsIter, TechnicalAnt, BestDista
                 Distance < BestDistance ->
                     Time = erlang:convert_time_unit(erlang:monotonic_time() - StartTime, native, millisecond),
                     % io:format("New best path:  ~w,\tPath: ~w, \tFound after: ~w ms\n", [Distance, Path, Time]),
-                    io:format("New best path:  ~w, \tFound after: ~w ms\n", [Distance, Time]),
+                    io:format("New best path: ~s,\tFound after: ~w ms\n", [float_to_list(Distance,[{decimals,3},compact]) , Time]),
                     master(StartTime, Stop, StopCondition, AntsQt, AntsIter + 1, TechnicalAnt, Distance, Path);
                 true ->
                     master(StartTime, Stop, StopCondition, AntsQt, AntsIter + 1, TechnicalAnt, BestDistance, BestPath)

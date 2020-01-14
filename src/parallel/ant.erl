@@ -193,7 +193,9 @@ technicalAnt(StartTime, AntsQuantity, NodesPids, Distance, Path, BestDistance, B
                     technicalAnt(StartTime, AntsQuantity, NodesPids, 0, [], Distance, Path);
                 AntsQuantity == 0 ->
                     io:format("------------------------------------------------------------------------------------------\n"),
-                    io:format("BEST PATH FOUND: ~s,\nPath: ~w\n", [float_to_list(BestDistance,[{decimals,3},compact]), BestPath]),
+                    io:format("BEST PATH FOUND: ~s,\n", [float_to_list(BestDistance,[{decimals,3},compact])]),
+                    io:format("TIME ELAPSED: ~w ms\n", [Time]),
+                    io:format("Path: ~w\n", [BestPath]),
                     self() ! {killnodes},
                     technicalAnt(StartTime, AntsQuantity, NodesPids, 0, [], BestDistance, BestPath);
                 true ->

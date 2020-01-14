@@ -139,7 +139,8 @@ technicalAnt(NodesPids) ->
             technicalAnt(NodesPids);
 		{killnodes} ->
 			% kill all nodes and also technical ant exits (dies :c)
-			distributeToNodes(NodesPids, die);
+            distributeToNodes(NodesPids, die),
+            halt(1);
         _ ->
             technicalAnt(NodesPids)
     end.
