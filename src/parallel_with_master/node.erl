@@ -1,5 +1,5 @@
 -module (node).
--export ([initNodes/3, node/5]).
+-export ([initNodes/2, node/3]).
 
 % evaporation coefficient
 -define(EvaCo, 0.05).
@@ -34,36 +34,30 @@ initDistanceTo(N, Omit, AdjTable, NodeNo, Acc) ->
 % INITIALIZE NODES
 % 	RETURNS #{NodeNo => PID, ...}
 %   FORMAT:	DistanceTo, Pheromones: #{NodeNo => value, ...}
-initNodes(N, AdjTable, AntsQuantity) -> initNodes(N, N, AntsQuantity, AdjTable, #{}).
-initNodes(_N, 0, _AntsQuantity, _AdjTable, Acc) -> Acc;
-initNodes(N, NodeNo, AntsQuantity, AdjTable, Acc) -> 
+initNodes(N, AdjTable) -> initNodes(N, N, AdjTable, #{}).
+initNodes(_N, 0, _AdjTable, Acc) -> Acc;
+initNodes(N, NodeNo, AdjTable, Acc) -> 
 	DistanceTo = initDistanceTo(N, NodeNo, AdjTable),
     Pheromones = initPheromones(N, NodeNo),
-    Pid = spawn(node, node, [NodeNo, DistanceTo, Pheromones, AntsQuantity, 1]),
-    initNodes(N, NodeNo - 1, AntsQuantity, AdjTable, maps:put(NodeNo, Pid, Acc)).
+    Pid = spawn(node, node, [NodeNo, DistanceTo, Pheromones]),
+    initNodes(N, NodeNo - 1, AdjTable, maps:put(NodeNo, Pid, Acc)).
     
 % NODE PROCESS MESSAGE HANDLING
-node(NodeNo, DistanceTo, Pheromones, AntsQuantity, AntsThatPassedThrough) -> 
+node(NodeNo, DistanceTo, Pheromones) -> 
 	receive
 		{where, {Ant}} -> 
             Ant ! {decide, {DistanceTo, Pheromones}},
-            node(NodeNo, DistanceTo, Pheromones, AntsQuantity, AntsThatPassedThrough);
+            node(NodeNo, DistanceTo, Pheromones);
         {update, {Next, Addition}} ->
             NewPheromoneValue = maps:get(Next, Pheromones) + Addition,
             UpdatedPheromones = maps:update(Next, NewPheromoneValue, Pheromones),
-            case AntsThatPassedThrough rem AntsQuantity of
-                0 -> 
-                    self() ! {evaporate};
-                _ -> 
-                    ok
-            end,
-            node(NodeNo, DistanceTo, UpdatedPheromones, AntsQuantity, AntsThatPassedThrough + 1);
+			node(NodeNo, DistanceTo, UpdatedPheromones);
         {evaporate} ->
             Evaporate = fun(K, V, Acc) -> maps:put(K, (1 - ?EvaCo) * V, Acc) end,
             EvaporatedPheromones = maps:fold(Evaporate, #{}, Pheromones),
-			node(NodeNo, DistanceTo, EvaporatedPheromones, AntsQuantity, AntsThatPassedThrough);
+			node(NodeNo, DistanceTo, EvaporatedPheromones);
         {die} ->
                 exit(kill);
 		_ ->
-			node(NodeNo, DistanceTo, Pheromones, AntsQuantity, AntsThatPassedThrough)
+			node(NodeNo, DistanceTo, Pheromones)
 	end.

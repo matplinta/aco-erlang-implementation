@@ -1,5 +1,5 @@
 -module (ant).
--export ([initAnts/5, ant/5, initTechnicalAnt/1, technicalAnt/1]).
+-export ([initAnts/4, ant/4, initTechnicalAnt/1, technicalAnt/1]).
 
 % Pheromone level deposition constant; Pheromone deposited on a node = Q/Lk
 % where Lk is a cost of the k'th ant tour, typically, in our case, lenght of the tour
@@ -17,11 +17,11 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % INITIALIZE ANTS
-initAnts(_Master, _Iterations, _N, 0, _NodesPids) -> ok;
-initAnts(TechnicalAnt, Iterations, N, AntsQuantity, NodesPids) -> 
-	Ant = spawn(ant, ant, [TechnicalAnt, Iterations, NodesPids, 0, []]),
+initAnts(_Master, _N, 0, _NodesPids) -> ok;
+initAnts(Master, N, AntsQuantity, NodesPids) -> 
+	Ant = spawn(ant, ant, [Master, NodesPids, 0, []]),
 	Ant ! {init, {rand:uniform(N)}},
-	initAnts(TechnicalAnt, Iterations, N, AntsQuantity - 1, NodesPids).
+	initAnts(Master, N, AntsQuantity - 1, NodesPids).
 
 % UPDATE PHEROMONE LEVEL ON TRAVERSED PATH
 updatePheromonesOnPath(_, _, [ _ | []]) -> ok;
@@ -79,29 +79,29 @@ selectNextNode(DistanceTo, Pheromones, Visited) ->
 	rouletteWheel(ProbabilitiesOfNTV, SumOfProbabilities).
 
 % ANT PROCESS MESSAGE HANDLING
-ant(TechnicalAnt, Iterations, NodesPids, Distance, Path) -> 
+ant(Master, NodesPids, Distance, Path) -> 
     receive
         {init, {StartNode}} -> 
 			NodePid = maps:get(StartNode, NodesPids),
 			NodePid ! {where, {self()}},
-			ant(TechnicalAnt, Iterations, NodesPids, Distance, [ StartNode | Path]);
+			ant(Master, NodesPids, Distance, [ StartNode | Path]);
         {decide, {DistanceTo, Pheromones}} -> 
 			case maps:size(NodesPids) == length(Path) of
 				true ->
 					FirstNode = lists:last(Path),
                     DistToFirst = maps:get(FirstNode, DistanceTo),
                     self() ! {finish},
-					ant(TechnicalAnt, Iterations, NodesPids, Distance + DistToFirst, lists:reverse([ FirstNode | Path]));
+					ant(Master, NodesPids, Distance + DistToFirst, lists:reverse([ FirstNode | Path]));
 				false ->
             		NextNode = selectNextNode(DistanceTo, Pheromones, Path),
                     NextNodePid = maps:get(NextNode, NodesPids),
                     NextNodePid ! {where, {self()}},
                     DistToNode = maps:get(NextNode, DistanceTo),
-                    ant(TechnicalAnt, Iterations, NodesPids, Distance + DistToNode, [ NextNode | Path])
+                    ant(Master, NodesPids, Distance + DistToNode, [ NextNode | Path])
             end;
 		{finish} -> 
             % send to master info of best fitness
-			TechnicalAnt ! {check, {self(), Distance, Path}},
+			Master ! {check, {self(), Distance, Path}},
 			% UNCOMMENT IF YOU WISH TO SEE EVERY SINGLE ANT'S DISTANCE AND PATH
 			% io:format("\nAnt: Distance: ~w,\tPath: ~w", [Distance, Path]),
             % update pheromone table on path
@@ -109,17 +109,11 @@ ant(TechnicalAnt, Iterations, NodesPids, Distance, Path) ->
             updatePheromonesOnPath(NodesPids, Addition, Path),
             % restart ant's journey
             self() ! {init, {rand:uniform(maps:size(NodesPids))}},
-            case Iterations of 
-                0 -> 
-                    TechnicalAnt ! {antdied},
-                    exit(kill);
-                _ -> ant(TechnicalAnt, Iterations - 1, NodesPids, 0, [])
-            end;
-		% {die} ->
-        %     io:format("I die\n"),
-		% 	exit(kill);
+            ant(Master, NodesPids, 0, []);
+		{die} ->
+			exit(kill);
         _ ->
-            ant(TechnicalAnt, Iterations, NodesPids, Distance, Path)
+            ant(Master, NodesPids, Distance, Path)
     end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -138,43 +132,14 @@ initTechnicalAnt(NodesPids) ->
     spawn(ant, technicalAnt, [NodesPids]).
 
 % TECHNICAL ANT PROCESS MESSAGE HANDLING
-technicalAnt(AntsQuantity, Iterations, NodesPids, Distance, Path) -> 
+technicalAnt(NodesPids) ->
     receive
-        {init, {StartNode}} -> 
-            NodePid = maps:get(StartNode, NodesPids),
-            NodePid ! {where, {self()}},
-            ant(AntsQuantity, Iterations, NodesPids, Distance, [ StartNode | Path]);
-        {decide, {DistanceTo, Pheromones}} -> 
-            case maps:size(NodesPids) == length(Path) of
-                true ->
-                    FirstNode = lists:last(Path),
-                    DistToFirst = maps:get(FirstNode, DistanceTo),
-                    self() ! {finish},
-                    ant(AntsQuantity, Iterations, NodesPids, Distance + DistToFirst, lists:reverse([ FirstNode | Path]));
-                false ->
-                    NextNode = selectNextNode(DistanceTo, Pheromones, Path),
-                    NextNodePid = maps:get(NextNode, NodesPids),
-                    NextNodePid ! {where, {self()}},
-                    DistToNode = maps:get(NextNode, DistanceTo),
-                    ant(AntsQuantity, Iterations, NodesPids, Distance + DistToNode, [ NextNode | Path])
-            end;
-        {finish} -> 
-            % send to master info of best fitness
-            AntsQuantity ! {check, {self(), Distance, Path}},
-            % UNCOMMENT IF YOU WISH TO SEE EVERY SINGLE ANT'S DISTANCE AND PATH
-            % io:format("\nAnt: Distance: ~w,\tPath: ~w", [Distance, Path]),
-            % update pheromone table on path
-            Addition = ?Q / Distance,
-            updatePheromonesOnPath(NodesPids, Addition, Path),
-            % restart ant's journey
-            self() ! {init, {rand:uniform(maps:size(NodesPids))}},
-            case Iterations of 
-                0 -> io:format("I die\n"), exit(kill);
-                _ -> ant(TechnicalAnt, Iterations - 1, NodesPids, 0, [])
-            end;
-        {killnodes} ->
-            % kill all nodes and also technical ant exits (dies :c)
-            distributeToNodes(NodesPids, die);
+        {evaporate} ->
+            distributeToNodes(NodesPids, evaporate),
+            technicalAnt(NodesPids);
+		{killnodes} ->
+			% kill all nodes and also technical ant exits (dies :c)
+			distributeToNodes(NodesPids, die);
         _ ->
-            ant(TechnicalAnt, Iterations, NodesPids, Distance, Path)
+            technicalAnt(NodesPids)
     end.
