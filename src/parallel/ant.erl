@@ -207,7 +207,7 @@ technicalAnt(StartTime, AntsQuantity, NodesPids, Distance, Path, BestDistance, B
         {killnodes} ->
             % kill all nodes and also technical ant exits (dies :c)
             distributeToNodes(NodesPids, die),
-            io:format("Ants, Nodes and TechnicalAnt exited.\n"),
+            % io:format("Ants, Nodes and TechnicalAnt exited.\n"),
             halt(0);
         {antdied} ->
             technicalAnt(StartTime, AntsQuantity - 1, NodesPids, Distance, Path, BestDistance, BestPath);
