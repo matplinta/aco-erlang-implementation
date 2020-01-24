@@ -1,9 +1,10 @@
 # aco-erlang-implementation
-Implementation of Ant Colony Optimization (ACO) in Erlang language. Solving travelling salesman problem (TSP). Project realized for Computational Intelligence class.
+Implementation of Ant Colony Optimization (ACO) in Erlang language. Solving travelling salesman problem (TSP).  
+Project realized for Computational Intelligence class, AGH University of Science and Techonology
 
 ---
 ## About
-Program finds near-optimal solution for travelling salesman problem (TSP) using Ant Colony Optimization algorithm. Structurally program consists of 4 types of processes (besides the main process). These are _node_, which quantity is equal to the number of cities defined in a [TSPLIB data file](http://elib.zib.de/pub/mp-testdata/tsp/tsplib/tsp/index.html), _ant_, which quantity is defined by the user, _technical ant_, which is an ant created solely to give evaporation and die orders to all nodes upon certain conditions met, and lastly _master_ which is a checking process for finding the best solution and other such utilities. 
+Program finds near-optimal solution for travelling salesman problem (TSP) using Ant Colony Optimization algorithm. 
 
 ## Usage
 To compile and run:
@@ -25,8 +26,17 @@ Where _method_ is a chosen method from folder _src_.
 
 
 ---
+## Methods
+Below described are 3 methods available in this repository.
+#### parallel
+This is the best and default method in this project. It mitigates the bottleneck problem of the parallel_with_master method by completely getting rid of _master_ process. Here each node is responsible for evaporation of its pheromone table, which happenes each time a complete number of ants in the system passes through the node. The _technical ant_ process is here responsible for traversing the best path by the pheromone indication level, which happenes without any selecting method like roulette wheel selection, like with the rest of ants. Here _technical ant_ only looks at the best possible path based on pheromone level in pheromone table of the node. It is also responsible for killing nodes, itself and main program on the end of the execution. 
 
-## Mechanizm działania
+
+#### parallel_with_master
+Structurally program consists of 4 types of processes (besides the main process). These are _node_, which quantity is equal to the number of cities defined in a [TSPLIB data file](http://elib.zib.de/pub/mp-testdata/tsp/tsplib/tsp/index.html), _ant_, which quantity is defined by the user, _technical ant_, which is an ant created solely to give evaporation and die orders to all nodes upon certain conditions met, and lastly _master_ which is a checking process for finding the best solution and other such utilities.  
+While this method is conceptually simple, it proved to have a bottleneck in the _master_ and _technical ant_ processes, which are only singular. Thus, for large datasets this solution is not optimal.
+
+
 ```erlang
 node(NodeNo, DistanceTo, Pheromones) 
 ```
@@ -42,34 +52,24 @@ ant(Master, NodesPids, Distance, Path)
 * zgodnie ze współczynnikiem ewaporacji odparowywana jest porcja feromonu na wszystkich węzłach
 * po przekroczeniu założonej z góry ilości iteracji, program jest przerywany, procesy wszystkie poza głównym są zabijane, a najlepszy wynik wraz z czasem obliczeń jest wyświetlany
 
+
+#### sequential
+This is the most basic implementation of ACO algorithm, which does not leverage any kind of data and computing concurrency.
+
+
+
 ## Slurm
-**Zeus Erlang 21.3**
+Load **Erlang 21.3** using the following command:
 ```
 module load plgrid/apps/erlang/21.3
 ```
+To schedule sbatch job, edit the sbatch-job.sh file appropriately and run it with `sbatch sbatch-job.sh`.
 
-## Notatki z konsultacji
+## Troubleshooting
 
-__Dywagacje i rozważania nt. ewaporacji__ 
-* ROZWAŻANE: każda mrówka po przejściu ścieżki do krawędzi wysyła info o zwiększeniu feromonu, a do pozostalych wysyła: evaporuj -> wtedy synchronizacja między chodzeniem mrówek a parowaniu, n więcej komunikatów w systemie -> kapkę ciężko  
-* ROZWAŻANE: mrówka specjalistka -> jak doszłą do trasy, (jednej pojdzie lepiej, drugiej gorzej), ona zapinguje proces odparowywacz, który ...  
-* NIE WOLNO: każdy z procesów krawędzi sam będzie siebie odparowywał -> najgorsze problemy synchronizacji w erlangu to pytanie zegara o coś  
-* ROZWAŻANIE: ileś mrówek przeszło przez krawędź, krawędź sobie zlicza liczbę odwiedzin, i wtedy sobie odlicza feromony -> może być pechowa krawędź, przez którą żadna mrówka nie przejdzie :(
-* SOLUTION vol. 1 -> jeden zegarowany proces i zobaczymy co się będzie działo, ale to jest wtedy zależne od prędkości wykonania  
-* SOLUTION vol. 2 -> w jakiś sposób to uzależnić od przebiegu algorytmu  
-* Warunkiem stopu będzie jakiś czas określony, bądź w iteracjach mrówki (pojedynczej?)
-
----
-
-
-WĘZEŁ JAKO PROCES:
-* węzeł: N-1 krawędzi, info dokąd dojść, komplet informacji o feromonach
-* jak mrówki dochodza do węzła z innych stron to mogą się informacje rozejść (trza to rozwiązać, jakoś średnią wyciągnąć czy coś -> chodzi o info o tablicy feromonu zawarte na węzłach połaczonych krawędzią, żeby te dane były TE SAME a nie rozbieżne)
-* kierunkowość nam jest niepotrzebna
-
-* mrówka może mieć w pamięci lub dostać mapę aktualnych wartości feromonów na krawędzi 
-* wartość feromonu zależy od długości, dlatego dopiero po przebyciu całej ścieżki można odpowiednio updatować wartości feromonu
-* odparowywanie: jeden dedykowany proces, który przez wszystkie węzły przechodzi i odparowuje, może niech to będzie mrówka która przechodzi przez wszystkie węzły. Niech mrówka chodzi sobie sekwencyjnie i odparowuje, i tu nie będzie problemu z kierunkowością. Może niech ona też godzi te rozjazdy miedzy kierunkami, żeby uśredniać? Dobry pomysł, parować i zmniejszać te rozjazdy. Fajnie.
-
-https://books.google.pl/books?id=pg9f4rmV-akC&lpg=PA413&ots=il3o_t9JHf&dq=tsplib%20%22oliver30%22%20best&pg=PA413#v=onepage&q=tsplib%20%22oliver30%22%20best&f=false
-
+If you are getting this kind of error: 
+```sh
+{"init terminating in do_boot",{badarith,[{node,initDistanceTo,5,[{file,"src/parallel/node.erl"},{line,28}]},{node,initNodes,5,[{file,"src/parallel/node.erl"},{line,40}]},{main,start,1,[{file,"src/parallel/main.erl"},{line,17}]},{init,start_em,1,[]},{init,do_boot,3,[]}]}}
+init terminating in do_boot ({badarith,[{node,initDistanceTo,5,[{_},{_}]},{node,initNodes,5,[{_},{_}]},{main,start,1,[{_},{_}]},{init,start_em,1,[]},{init,do_boot,3,[]}]})
+```
+it probably means that the tsplib data file is not being parsed correctly. Check if nodes location is in integers of in scientific notation. If the latter, please convert it using attached converter.
