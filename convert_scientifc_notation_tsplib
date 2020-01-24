@@ -1,0 +1,24 @@
+#!/usr/bin/python3 
+
+import re
+import sys
+
+if len(sys.argv) != 3:
+    print("Convert tsplib file from scientific notation to integers\nUsage ./convert <file> <fileConverted>")
+    exit(0)
+
+path = sys.argv[1]
+convertedPath = sys.argv[2]
+
+convertedLines = []
+with open(path, "r") as File:
+    for line in File.readlines():
+        if not re.search(r'^\d+.*', line):
+            convertedLines.append(line)
+        else:
+            no, x, y = line.split()
+            convertedLines.append("{} {} {}\n".format(no, int(float(x)), int(float(y))))
+        
+with open(convertedPath, "w") as Converted:
+    Converted.writelines(convertedLines)
+    Converted.close()

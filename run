@@ -11,5 +11,5 @@ mkdir -p ebin/$METHOD
 
 erlc -o ebin/$METHOD src/$METHOD/*.erl
 
-erl -pz ebin/$METHOD -s main start $1 $2 $3
+erl -pz ebin/$METHOD -sname ACO -noshell -s main start $1 $2 $3
 # erl -pz ebin -s main start problems/oliver3.tsp 2 2
