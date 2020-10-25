@@ -40,23 +40,20 @@ While this method is conceptually simple, it proved to have a bottleneck in the 
 ```erlang
 node(NodeNo, DistanceTo, Pheromones) 
 ```
-* każdy węzeł posiada informację o swoim numerze oraz mapach dystansu do każdego innego węzła oraz mapę wartości feromonu do innych węzłów
+* each node has knows about its own number and distance maps to each other node, along with the pheromone value map to the other nodes 
 ```erlang
 ant(Master, NodesPids, Distance, Path) 
 ```
-* mrówka posiada pid procesu mastera, mapę pidów każdego węzła oraz własny przebyty dystans wraz z listą przebytych węzłów
-* w czasie drogi mrówka wysyła zapytanie do procesu obecnego węzła gdzie ma iść dalej, na co w odpowiedzi dostaje mapy dystansu i wartości feromonu; na ich podstawie mrówka oblicza prawdopodobieństwa każdej krawędzi wychodzącej od tego węzła
-* kolejny węzeł na drodze mrówki wybierany(losowany) jest metodą _Roulette Wheel_, dzięki czemu omijamy lokalne minima i stopniowo widać jak uzyskiwane wyniki się polepszają
-* każda mrówka po zakończeniu drogi wysyła stosowną informację do procesu _mastera_, który to odpowiednio uwzględni tę informację u siebie; mrówka natomiast potem aktualizuje wartości feromonu w każdym węźle zgodnie z obliczoną wartością (**należy tutaj zaznaczyć, iż mrówka wysyła informację do obu węzłów tworzących krawędź, dzięki czemu informacje w dwóch procesach nie rozchodzą się i są identyczne**), po czym rozpoczyna swoją podróż na nowo, ponownie losując początkowy węzeł.
-* proces _master_ przechowuje aktualnie najlepszy wynik oraz ilość już zaraportowanych wyników; gdy wartość ta przekroczy liczbę zdefiniowanych w systemie mrówek, zakładamy, iż minęła jedna iteracja i do procesu _technical ant_ wysyłana jest informacja o potrzebie ewaporacji wartości feromonu
-* zgodnie ze współczynnikiem ewaporacji odparowywana jest porcja feromonu na wszystkich węzłach
-* po przekroczeniu założonej z góry ilości iteracji, program jest przerywany, procesy wszystkie poza głównym są zabijane, a najlepszy wynik wraz z czasem obliczeń jest wyświetlany
-
+* the ant has the pid of the master process, the pid map of each node and its own distance traveled with a list of nodes traveled
+* while on the way, the ant sends a query to the current node's process where to go next, to which he receives distance maps and pheromone values ​​in response; on their basis, the ant calculates the probabilities of each edge originating from this node
+* the next node on the ant's path is selected (randomly) using the _Roulette Wheel_ method, thanks to which we avoid the local minima and gradually see how the results are improving
+* each ant, after completing the journey, sends the appropriate information to the _mastera_ process, which will take this information into account accordingly the ant then updates the pheromone values ​​in each node according to the calculated value (** it should be noted here that the ant sends information to both nodes forming the edge, so that the information in the two processes does not diverge and are identical **), and then starts its the journey again, re-drawing the starting node.
+* the _master_ process stores the currently best result and the number of results already reported; when this value exceeds the number of ants defined in the system, we assume that one iteration has passed and information about the need to evaporate the pheromone value is sent to the _technical ant_ process
+* according to the evaporation rate, the pheromone portion is evaporated on all nodes
+* after exceeding the predetermined number of iterations, the program is terminated, all processes except the main one are killed, and the best result is displayed together with the calculation time
 
 #### sequential
 This is the most basic implementation of ACO algorithm, which does not leverage any kind of data and computing concurrency.
-
-
 
 ## Slurm
 Load **Erlang 21.3** using the following command:
