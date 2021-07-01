@@ -29,25 +29,33 @@ Where _method_ is a chosen method from folder _src_.
 ## Methods
 Below described are 3 methods available in this repository.
 #### parallel
-This is the best and default method in this project. It mitigates the bottleneck problem of the parallel_with_master method by completely getting rid of _master_ process. Here each node is responsible for evaporation of its pheromone table, which happenes each time a complete number of ants in the system passes through the node. The _technical ant_ process is here responsible for traversing the best path by the pheromone indication level, which happenes without any selecting method like roulette wheel selection, like with the rest of ants. Here _technical ant_ only looks at the best possible path based on pheromone level in pheromone table of the node. It is also responsible for killing nodes, itself and main program on the end of the execution. 
+This is the best and default method in this project. It mitigates the bottleneck problem of the *parallel_with_master* method by completely getting rid of _master_ process. Here each node is responsible for evaporation of its pheromone table, which happenes each time a complete number of ants in the system passes through the node. The _technical ant_ process is here responsible for traversing the best path by the pheromone indication level, which happenes without any selecting method like roulette wheel selection, like with the rest of ants. Here _technical ant_ only looks at the best possible path based on pheromone level in pheromone table of the node. It is also responsible for killing nodes, itself and main program on the end of the execution. 
 
 
 #### parallel_with_master
-Structurally program consists of 4 types of processes (besides the main process). These are _node_, which quantity is equal to the number of cities defined in a [TSPLIB data file](http://elib.zib.de/pub/mp-testdata/tsp/tsplib/tsp/index.html), _ant_, which quantity is defined by the user, _technical ant_, which is an ant created solely to give evaporation and die orders to all nodes upon certain conditions met, and lastly _master_ which is a checking process for finding the best solution and other such utilities.  
+Structurally program consists of 4 types of processes (besides the main process). These are:
+  - _node_, which quantity is equal to the number of cities defined in a [TSPLIB data file](http://elib.zib.de/pub/mp-testdata/tsp/tsplib/tsp/index.html), 
+  - _ant_, which quantity is defined by the user, 
+  - _technical ant_, which is an ant created solely to give evaporation and die orders to all nodes upon certain conditions met,
+  - _master_ which is a checking process for finding the best solution and other such utilities.  
+
+
 While this method is conceptually simple, it proved to have a bottleneck in the _master_ and _technical ant_ processes, which are only singular. Thus, for large datasets this solution is not optimal.
 
-
+Few more details:
 ```erlang
 node(NodeNo, DistanceTo, Pheromones) 
 ```
-* each node has knows about its own number and distance maps to each other node, along with the pheromone value map to the other nodes 
+* each node knows about its own number and distance maps to each other node, along with the pheromone value map to the other nodes 
 ```erlang
 ant(Master, NodesPids, Distance, Path) 
 ```
 * the ant has the pid of the master process, the pid map of each node and its own distance traveled with a list of nodes traveled
 * while on the way, the ant sends a query to the current node's process where to go next, to which he receives distance maps and pheromone values ​​in response; on their basis, the ant calculates the probabilities of each edge originating from this node
 * the next node on the ant's path is selected (randomly) using the _Roulette Wheel_ method, thanks to which we avoid the local minima and gradually see how the results are improving
-* each ant, after completing the journey, sends the appropriate information to the _mastera_ process, which will take this information into account accordingly the ant then updates the pheromone values ​​in each node according to the calculated value (** it should be noted here that the ant sends information to both nodes forming the edge, so that the information in the two processes does not diverge and are identical **), and then starts its the journey again, re-drawing the starting node.
+* each ant, after completing the journey, sends the appropriate information to the _master_ process, which will take this information into account accordingly. The ant then updates the pheromone values ​​in each node according to the calculated value**,  and then starts its journey again, re-drawing the starting node.
+    > ** it should be noted here that the ant sends information to both nodes forming the edge, so that the information in the two processes does not diverge and are identical
+
 * the _master_ process stores the currently best result and the number of results already reported; when this value exceeds the number of ants defined in the system, we assume that one iteration has passed and information about the need to evaporate the pheromone value is sent to the _technical ant_ process
 * according to the evaporation rate, the pheromone portion is evaporated on all nodes
 * after exceeding the predetermined number of iterations, the program is terminated, all processes except the main one are killed, and the best result is displayed together with the calculation time
